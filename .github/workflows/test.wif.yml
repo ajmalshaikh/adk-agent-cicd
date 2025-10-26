@@ -1,0 +1,20 @@
+name: WIF Smoke Test
+on: workflow_dispatch
+permissions:
+  id-token: write
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Authenticate
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SA_EMAIL }}
+      - name: Verify
+        run: |
+          gcloud auth list --filter=status:ACTIVE --format="value(account)"
+          gcloud config set project ${{ secrets.GCP_PROJECT_ID }}
+          gcloud projects describe ${{ secrets.GCP_PROJECT_ID }} --format="value(projectId)"

@@ -1,0 +1,44 @@
+name: Build & Deploy ADK Agent
+
+on:
+  push:
+    branches: [ "main" ]
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  ARTIFACT_REPO: adk-agent-repo
+
+jobs:
+  build-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SA_EMAIL }}
+
+      - name: Configure gcloud
+        run: |
+          gcloud config set project ${{ secrets.GCP_PROJECT_ID }}
+          gcloud config set run/region ${{ secrets.GCP_REGION }}
+
+      - name: Configure Docker
+        run: |
+          gcloud --quiet auth configure-docker ${ { secrets.GCP_REGION } }-docker.pkg.dev
+
+      - name: Build and push image
+        run: |
+          IMAGE=${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${ARTIFACT_REPO}/adk-agent:${{ github.sha }}
+          docker build -t $IMAGE ./app
+          docker push $IMAGE
+
+      - name: Deploy to Cloud Run
+        run: |
+          IMAGE=${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${ARTIFACT_REPO}/adk-agent:${{ github.sha }}
+          gcloud run deploy adk-agent-service --image $IMAGE --region ${{ secrets.GCP_REGION }} --platform managed --project ${{ secrets.GCP_PROJECT_ID }} --allow-unauthenticated

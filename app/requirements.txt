@@ -1,0 +1,6 @@
+fastapi==0.95.2
+uvicorn==0.22.0
+google-cloud-aiplatform==1.30.2
+requests==2.31.0
+# Later add ADK packages per docs:
+# pip install adk (or google-cloud-adk) as advised by ADK docs
